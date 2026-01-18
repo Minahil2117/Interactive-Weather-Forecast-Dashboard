@@ -33,7 +33,7 @@ A modern, responsive weather application built with HTML5, CSS3, and ES6+ JavaSc
 
 ## 🚀 Live Demo
 
-Experience the weather dashboard live: **[Your Live Demo URL Here]**
+Experience the weather dashboard live: ** https://minahil2117.github.io/Interactive-Weather-Forecast-Dashboard/**
 
 ## 📸 Screenshots
 
