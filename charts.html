@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Charts - WeatherPro Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link href="https://unpkg.com/splitting@1.0.6/dist/splitting.css" rel="stylesheet">
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --primary-color: #3B82F6;
+            --secondary-color: #F59E0B;
+            --accent-color: #10B981;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F9FAFB;
+            --border-color: #E5E7EB;
+        }
+        
+        /* Weather Theme Variables */
+        .theme-sunny {
+            --primary-color: #F59E0B;
+            --secondary-color: #FCD34D;
+            --accent-color: #FB7185;
+            --bg-gradient: linear-gradient(135deg, #3B82F6 0%, #F59E0B 100%);
+        }
+        
+        .theme-rainy {
+            --primary-color: #334155;
+            --secondary-color: #64748B;
+            --accent-color: #06B6D4;
+            --bg-gradient: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+        }
+        
+        .theme-snowy {
+            --primary-color: #E0F2FE;
+            --secondary-color: #F8FAFC;
+            --accent-color: #A78BFA;
+            --bg-gradient: linear-gradient(135deg, #0284C7 0%, #E0F2FE 100%);
+        }
+        
+        .theme-cloudy {
+            --primary-color: #6B7280;
+            --secondary-color: #9CA3AF;
+            --accent-color: #34D399;
+            --bg-gradient: linear-gradient(135deg, #374151 0%, #6B7280 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        /* Glass Morphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        .control-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .control-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .control-button.active {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        /* Chart Cards */
+        .chart-card {
+            transition: all 0.3s ease;
+        }
+        
+        .chart-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Data Export */
+        .export-button {
+            background: rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10B981;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .export-button:hover {
+            background: rgba(16, 185, 129, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        /* Custom Animations */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.8s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+            
+            .control-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-button {
+                text-align: center;
+            }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="theme-sunny">
+    <!-- Navigation -->
+    <nav class="glass-card mx-4 mt-4 p-4 fade-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <img src="weather-logo.png" alt="WeatherPro" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-white">WeatherPro</h1>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="index.html" class="text-white/80 hover:text-yellow-300 transition-colors">Dashboard</a>
+                <a href="forecast.html" class="text-white/80 hover:text-yellow-300 transition-colors">Forecast</a>
+                <a href="charts.html" class="text-white font-medium hover:text-yellow-300 transition-colors">Charts</a>
+                <a href="about.html" class="text-white/80 hover:text-yellow-300 transition-colors">About</a>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" id="citySearch" placeholder="Search city..." 
+                           class="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-2 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                    <button id="searchBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-white hover:text-yellow-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button id="locationBtn" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Page Header -->
+        <section class="text-center mb-8 fade-in">
+            <h2 class="text-4xl font-bold text-white mb-2">Weather Data Analytics</h2>
+            <p class="text-white/80 text-lg">Interactive charts and detailed weather analysis</p>
+            <div class="flex items-center justify-center space-x-2 mt-4">
+                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                </svg>
+                <span id="currentLocation" class="text-xl text-white font-medium">New York, NY</span>
+            </div>
+        </section>
+        
+        <!-- Control Panel -->
+        <section class="glass-card p-4 mb-8 fade-in">
+            <div class="control-panel">
+                <button class="control-button active" data-chart="temperature">Temperature</button>
+                <button class="control-button" data-chart="precipitation">Precipitation</button>
+                <button class="control-button" data-chart="wind">Wind Speed</button>
+                <button class="control-button" data-chart="pressure">Pressure</button>
+                <button class="control-button" data-chart="humidity">Humidity</button>
+                <button class="control-button" data-chart="uv">UV Index</button>
+                
+                <div class="ml-auto flex space-x-2">
+                    <button class="export-button" data-export="png">Export PNG</button>
+                    <button class="export-button" data-export="data">Export Data</button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Time Range Selector -->
+        <section class="glass-card p-4 mb-8 fade-in">
+            <div class="flex flex-wrap gap-3 items-center">
+                <span class="text-white font-medium">Time Range:</span>
+                <button class="control-button active" data-range="24h">24 Hours</button>
+                <button class="control-button" data-range="7d">7 Days</button>
+                <button class="control-button" data-range="30d">30 Days</button>
+                <button class="control-button" data-range="1y">1 Year</button>
+                
+                <div class="ml-auto flex items-center space-x-2">
+                    <label class="text-white text-sm">Auto Refresh:</label>
+                    <input type="checkbox" id="autoRefresh" class="toggle-switch" checked>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Main Chart -->
+        <section class="glass-card p-6 mb-8 fade-in chart-card">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-semibold text-white" id="chartTitle">Temperature Trends</h3>
+                <div class="flex items-center space-x-4 text-white/70 text-sm">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                        <span>High</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-blue-400 rounded-full"></div>
+                        <span>Low</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="mainChart"></canvas>
+            </div>
+        </section>
+        
+        <!-- Secondary Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- Precipitation Chart -->
+            <section class="glass-card p-6 fade-in chart-card">
+                <h3 class="text-xl font-semibold text-white mb-6">Precipitation Forecast</h3>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="precipitationChart"></canvas>
+                </div>
+            </section>
+            
+            <!-- Wind Chart -->
+            <section class="glass-card p-6 fade-in chart-card">
+                <h3 class="text-xl font-semibold text-white mb-6">Wind Patterns</h3>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="windChart"></canvas>
+                </div>
+            </section>
+            
+            <!-- Pressure Chart -->
+            <section class="glass-card p-6 fade-in chart-card">
+                <h3 class="text-xl font-semibold text-white mb-6">Atmospheric Pressure</h3>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="pressureChart"></canvas>
+                </div>
+            </section>
+            
+            <!-- Humidity Chart -->
+            <section class="glass-card p-6 fade-in chart-card">
+                <h3 class="text-xl font-semibold text-white mb-6">Humidity Levels</h3>
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="humidityChart"></canvas>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Weather Statistics -->
+        <section class="glass-card p-6 mb-8 fade-in">
+            <h3 class="text-xl font-semibold text-white mb-6">Weather Statistics</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="maxTemp">28°C</div>
+                    <div class="text-white/70 text-sm">Max Temp</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="minTemp">12°C</div>
+                    <div class="text-white/70 text-sm">Min Temp</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="avgWind">15 km/h</div>
+                    <div class="text-white/70 text-sm">Avg Wind</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="totalRain">45mm</div>
+                    <div class="text-white/70 text-sm">Total Rain</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="avgPressure">1013 hPa</div>
+                    <div class="text-white/70 text-sm">Avg Pressure</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold text-white" id="avgHumidity">65%</div>
+                    <div class="text-white/70 text-sm">Avg Humidity</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Data Insights -->
+        <section class="glass-card p-6 mb-8 fade-in">
+            <h3 class="text-xl font-semibold text-white mb-6">Weather Insights</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="text-2xl">📈</div>
+                        <div class="text-white font-medium">Temperature Trend</div>
+                    </div>
+                    <div class="text-white/80 text-sm">Temperature is expected to rise by 5°C over the next 3 days, reaching a peak of 28°C on Wednesday.</div>
+                </div>
+                
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="text-2xl">🌧️</div>
+                        <div class="text-white font-medium">Precipitation Alert</div>
+                    </div>
+                    <div class="text-white/80 text-sm">Heavy rainfall expected on Friday with precipitation levels reaching 80%. Plan indoor activities accordingly.</div>
+                </div>
+                
+                <div class="bg-white/10 rounded-lg p-4">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <div class="text-2xl">💨</div>
+                        <div class="text-white font-medium">Wind Advisory</div>
+                    </div>
+                    <div class="text-white/80 text-sm">Wind speeds will increase to 25 km/h on Thursday. Secure outdoor objects and be cautious while driving.</div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="glass-card mx-4 mb-4 p-6 text-center">
+        <div class="text-white/80">
+            <p class="mb-2">&copy; 2025 WeatherPro Dashboard. Professional weather insights.</p>
+            <p class="text-sm">Data provided by OpenWeatherMap and Visual Crossing</p>
+        </div>
+    </footer>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="glass-card p-8 text-center">
+            <div class="animate-spin w-12 h-12 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
+            <div class="text-white text-lg">Loading chart data...</div>
+        </div>
+    </div>
+    <!-- Javascript -->
+     <script src="main.js"></script>
+<script>
+/* ----------  fetch & normalise OpenWeatherMap hourly data  ---------- */
+async function fetchOWMHourly() {
+  const lat = 40.7128, lon = -74.0060;
+  const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=current,minutely,alerts&appid=${window.weatherDashboard.apiKey}&units=metric`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('OWM hourly failed');
+  const json = await res.json();
+  const now = new Date();
+  return json.hourly.slice(0, 24).map((h, i) => ({
+    timestamp: new Date(now.getTime() + i * 3600 * 1000),
+    temperature: { current: h.temp, high: h.temp + 2 + Math.random() * 2, low: h.temp - 2 - Math.random() * 2 },
+    precipitation: { value: h.pop * 100, probability: Math.min(100, (h.pop || 0) * 100 + Math.random() * 30) },
+    wind: { speed: h.wind_speed, direction: h.wind_deg || 0 },
+    pressure: { value: h.pressure },
+    humidity: { value: h.humidity },
+    uv: { value: h.uvi || 0 }
+  }));
+}
+
+/* ----------  page controller  ---------- */
+class ChartsPage {
+  constructor() {
+    this.currentChart = 'temperature';
+    this.currentRange = '24h';
+    this.charts = {};
+    this.autoRefresh = true;
+    this.rawHourly = [];
+    this.init();
+  }
+
+  async init() {
+    this.bindButtons();
+    try { this.rawHourly = await fetchOWMHourly(); } catch (e) {
+      console.warn('OWM hourly failed – using mock', e); this.mockHourly();
+    }
+    this.paintAll();        // draw every canvas
+    this.fillStats();       // bottom numbers
+    this.hideLoading();     // spinner off
+    if (this.autoRefresh) this.startRefresh();
+  }
+
+  mockHourly() {
+    const now = new Date();
+    this.rawHourly = Array.from({length: 24}, (_, i) => ({
+      timestamp: new Date(now.getTime() + i * 3600 * 1000),
+      temperature: { current: 20 + Math.sin(i * 0.5) * 8 + (Math.random() - 0.5) * 4, high: 0, low: 0 },
+      precipitation: { value: Math.max(0, Math.sin(i * 0.3) * 50 + (Math.random() - 0.5) * 20), probability: 0 },
+      wind: { speed: 10 + Math.sin(i * 0.4) * 8 + (Math.random() - 0.5) * 6, direction: 0 },
+      pressure: { value: 1013 + Math.sin(i * 0.2) * 15 + (Math.random() - 0.5) * 10 },
+      humidity: { value: Math.max(0, Math.min(100, 60 + Math.sin(i * 0.6) * 20 + (Math.random() - 0.5) * 15)) },
+      uv: { value: Math.max(0, Math.sin(i * 0.8) * 5 + 3 + (Math.random() - 0.5) * 2) }
+    }));
+  }
+
+  bindButtons() {
+    document.querySelectorAll('[data-chart]').forEach(btn => btn.addEventListener('click', e => this.switchChart(e.target.dataset.chart)));
+    document.querySelectorAll('[data-range]').forEach(btn => btn.addEventListener('click', e => this.switchRange(e.target.dataset.range)));
+    document.querySelectorAll('[data-export]').forEach(btn => btn.addEventListener('click', e => this.exportData(e.target.dataset.export)));
+    document.getElementById('autoRefresh').addEventListener('change', e => this.toggleRefresh(e.target.checked));
+  }
+
+  switchChart(type) {
+    this.currentChart = type;
+    document.querySelectorAll('[data-chart]').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-chart="${type}"]`).classList.add('active');
+    const titles = {temperature:'Temperature Trends',precipitation:'Precipitation Forecast',wind:'Wind Speed Analysis',pressure:'Atmospheric Pressure',humidity:'Humidity Levels',uv:'UV Index Tracking'};
+    document.getElementById('chartTitle').textContent = titles[type];
+    this.updateMain(type);
+  }
+  switchRange(range) {
+    this.currentRange = range;
+    document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+    document.querySelector(`[data-range="${range}"]`).classList.add('active');
+    this.mockHourly();              // simplistic – regenerate
+    this.paintAll();
+  }
+
+  /* ----------  draw every canvas  ---------- */
+  paintAll() {
+    this.drawMain();
+    this.drawPrecip();
+    this.drawWind();
+    this.drawPressure();
+    this.drawHumidity();
+  }
+  drawMain() {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if (this.charts.main) this.charts.main.destroy();
+    const labels = this.rawHourly.slice(-12).map(h => h.timestamp.toLocaleTimeString('en-US', {hour:'2-digit'}));
+    const highs  = this.rawHourly.slice(-12).map(h => Math.round(h.temperature.current + 2 + Math.random() * 3));
+    const lows   = this.rawHourly.slice(-12).map(h => Math.round(h.temperature.current - 2 - Math.random() * 3));
+    this.charts.main = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'High Temperature', data: highs, borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 3, fill: false, tension: 0.4
+        }, {
+          label: 'Low Temperature', data: lows, borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 3, fill: false, tension: 0.4
+        }]
+      },
+      options: this.chartOptions('temperature')
+    });
+  }
+  drawPrecip() {
+    const ctx = document.getElementById('precipitationChart').getContext('2d');
+    if (this.charts.precip) this.charts.precip.destroy();
+    this.charts.precip = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: this.rawHourly.slice(-12).map(h => h.timestamp.toLocaleTimeString('en-US', {hour:'2-digit'})),
+        datasets: [{
+          label: 'Precipitation (%)', data: this.rawHourly.slice(-12).map(h => h.precipitation.value),
+          backgroundColor: 'rgba(59,130,246,0.6)', borderColor: 'rgba(59,130,246,1)', borderWidth: 1
+        }]
+      },
+      options: this.simpleOptions('Precipitation (%)')
+    });
+  }
+  drawWind() {
+    const ctx = document.getElementById('windChart').getContext('2d');
+    if (this.charts.wind) this.charts.wind.destroy();
+    this.charts.wind = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: this.rawHourly.slice(-12).map(h => h.timestamp.toLocaleTimeString('en-US', {hour:'2-digit'})),
+        datasets: [{
+          label: 'Wind Speed (km/h)', data: this.rawHourly.slice(-12).map(h => h.wind.speed),
+          borderColor: 'rgba(16,185,129,1)', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, fill: true, tension: 0.4
+        }]
+      },
+      options: this.simpleOptions('Wind Speed (km/h)')
+    });
+  }
+  drawPressure() {
+    const ctx = document.getElementById('pressureChart').getContext('2d');
+    if (this.charts.pressure) this.charts.pressure.destroy();
+    this.charts.pressure = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: this.rawHourly.slice(-12).map(h => h.timestamp.toLocaleTimeString('en-US', {hour:'2-digit'})),
+        datasets: [{
+          label: 'Pressure (hPa)', data: this.rawHourly.slice(-12).map(h => h.pressure.value),
+          borderColor: 'rgba(139,92,246,1)', backgroundColor: 'rgba(139,92,246,0.1)', borderWidth: 2, fill: false, tension: 0.4
+        }]
+      },
+      options: this.simpleOptions('Pressure (hPa)')
+    });
+  }
+  drawHumidity() {
+    const ctx = document.getElementById('humidityChart').getContext('2d');
+    if (this.charts.humidity) this.charts.humidity.destroy();
+    const avg = this.rawHourly.reduce((s, h) => s + h.humidity.value, 0) / this.rawHourly.length;
+    this.charts.humidity = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Low (0-40%)', 'Moderate (40-70%)', 'High (70-100%)'],
+        datasets: [{
+          data: avg < 40 ? [60, 30, 10] : avg < 70 ? [25, 50, 25] : [10, 30, 60],
+          backgroundColor: ['rgba(34,197,94,0.8)', 'rgba(251,191,36,0.8)', 'rgba(239,68,68,0.8)'],
+          borderColor: ['rgba(34,197,94,1)', 'rgba(251,191,36,1)', 'rgba(239,68,68,1)'],
+          borderWidth: 2
+        }]
+      },
+      options: this.doughnutOptions()
+    });
+  }
+
+  updateMain(type) {
+    const ctx = document.getElementById('mainChart').getContext('2d');
+    if (this.charts.main) this.charts.main.destroy();
+    this.charts.main = new Chart(ctx, {
+      type: 'line',
+      data: this.getChartData(type),
+      options: this.chartOptions(type)
+    });
+  }
+  getChartData(type) {
+    const data = this.rawHourly.slice(-12);
+    const labels = data.map(h => h.timestamp.toLocaleTimeString('en-US', {hour:'2-digit'}));
+    if (type === 'temperature') {
+      const highs = data.map(h => Math.round(h.temperature.current + 2 + Math.random() * 3));
+      const lows  = data.map(h => Math.round(h.temperature.current - 2 - Math.random() * 3));
+      return {
+        labels,
+        datasets: [{
+          label: 'High Temperature', data: highs, borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.1)', borderWidth: 3, fill: false, tension: 0.4
+        }, {
+          label: 'Low Temperature', data: lows, borderColor: '#3B82F6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 3, fill: false, tension: 0.4
+        }]
+      };
+    }
+    const values = data.map(h => h[type].value || h[type].current || h[type].speed);
+    return {
+      labels,
+      datasets: [{ label: type.charAt(0).toUpperCase() + type.slice(1), data: values, borderColor: 'rgba(16,185,129,1)', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, fill: true, tension: 0.4 }]
+    };
+  }
+
+  chartOptions(type) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: 'white' } }, tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleColor: 'white', bodyColor: 'white', borderColor: 'rgba(255,255,255,0.2)', borderWidth: 1 } },
+      scales: { y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'white' } }, x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'white' } } },
+      interaction: { intersect: false, mode: 'index' }
+    };
+  }
+  simpleOptions(yLabel) {
+    return {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', titleColor: 'white', bodyColor: 'white' } },
+      scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'white' }, title: { display: true, text: yLabel, color: 'white' } }, x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'white' } } }
+    };
+  }
+  doughnutOptions() {
+    return { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: 'white', padding: 20 } } } };
+  }
+
+  /* ----------  statistics bar  ---------- */
+  fillStats() {
+    const temps = this.rawHourly.map(h => h.temperature.current);
+    const winds = this.rawHourly.map(h => h.wind.speed);
+    const precip = this.rawHourly.map(h => h.precipitation.value);
+    const press = this.rawHourly.map(h => h.pressure.value);
+    const hum = this.rawHourly.map(h => h.humidity.value);
+    document.getElementById('maxTemp').textContent = `${Math.round(Math.max(...temps))}°C`;
+    document.getElementById('minTemp').textContent = `${Math.round(Math.min(...temps))}°C`;
+    document.getElementById('avgWind').textContent = `${Math.round(winds.reduce((a, b) => a + b, 0) / winds.length)} km/h`;
+    document.getElementById('totalRain').textContent = `${Math.round(precip.reduce((a, b) => a + b, 0))} mm`;
+    document.getElementById('avgPressure').textContent = `${Math.round(press.reduce((a, b) => a + b, 0) / press.length)} hPa`;
+    document.getElementById('avgHumidity').textContent = `${Math.round(hum.reduce((a, b) => a + b, 0) / hum.length)}%`;
+  }
+
+  /* ----------  export / refresh utilities  ---------- */
+  exportData(format) {
+    if (format === 'png') {
+      const link = document.createElement('a');
+      link.download = `weather-chart-${this.currentChart}.png`;
+      link.href = this.charts.main.toBase64Image();
+      link.click();
+    } else if (format === 'data') {
+      const blob = new Blob([JSON.stringify(this.rawHourly, null, 2)], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.download = `weather-data-${this.currentChart}.json`;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+    }
+  }
+  toggleRefresh(on) {
+    this.autoRefresh = on;
+    on ? this.startRefresh() : this.stopRefresh();
+  }
+  startRefresh() {
+    this.refreshInterval = setInterval(async () => {
+      try { this.rawHourly = await fetchOWMHourly(); } catch (e) { this.mockHourly(); }
+      this.paintAll();
+      this.fillStats();
+    }, 30000);
+  }
+  stopRefresh() {
+    if (this.refreshInterval) { clearInterval(this.refreshInterval); this.refreshInterval = null; }
+  }
+  hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => new ChartsPage());
+</script>

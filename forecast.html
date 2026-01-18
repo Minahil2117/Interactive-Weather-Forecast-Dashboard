@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>7-Day Forecast - WeatherPro Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://unpkg.com/splitting@1.0.6/dist/splitting.css" rel="stylesheet">
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --primary-color: #3B82F6;
+            --secondary-color: #F59E0B;
+            --accent-color: #10B981;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F9FAFB;
+            --border-color: #E5E7EB;
+        }
+        
+        /* Weather Theme Variables */
+        .theme-sunny {
+            --primary-color: #F59E0B;
+            --secondary-color: #FCD34D;
+            --accent-color: #FB7185;
+            --bg-gradient: linear-gradient(135deg, #3B82F6 0%, #F59E0B 100%);
+        }
+        
+        .theme-rainy {
+            --primary-color: #334155;
+            --secondary-color: #64748B;
+            --accent-color: #06B6D4;
+            --bg-gradient: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+        }
+        
+        .theme-snowy {
+            --primary-color: #E0F2FE;
+            --secondary-color: #F8FAFC;
+            --accent-color: #A78BFA;
+            --bg-gradient: linear-gradient(135deg, #0284C7 0%, #E0F2FE 100%);
+        }
+        
+        .theme-cloudy {
+            --primary-color: #6B7280;
+            --secondary-color: #9CA3AF;
+            --accent-color: #34D399;
+            --bg-gradient: linear-gradient(135deg, #374151 0%, #6B7280 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        /* Glass Morphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Forecast Card Animations */
+        .forecast-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .forecast-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .forecast-card.expanded {
+            transform: scale(1.02);
+            z-index: 10;
+        }
+        
+        /* Hourly Timeline */
+        .hourly-timeline {
+            position: relative;
+        }
+        
+        .hourly-timeline::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transform: translateY(-50%);
+        }
+        
+        /* Temperature Bar */
+        .temp-bar {
+            height: 4px;
+            background: linear-gradient(90deg, #3B82F6, #F59E0B, #EF4444);
+            border-radius: 2px;
+            position: relative;
+        }
+        
+        .temp-indicator {
+            position: absolute;
+            top: -8px;
+            width: 4px;
+            height: 20px;
+            background: white;
+            border-radius: 2px;
+            transform: translateX(-50%);
+        }
+        
+        /* Weather Icons */
+        .weather-icon {
+            font-size: 3rem;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Custom Animations */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.8s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .forecast-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .weather-icon {
+                font-size: 2rem;
+            }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="theme-sunny">
+    <!-- Navigation -->
+    <nav class="glass-card mx-4 mt-4 p-4 fade-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <img src="weather-logo.png" alt="WeatherPro" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-white">WeatherPro</h1>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="index.html" class="text-white/80 hover:text-yellow-300 transition-colors">Dashboard</a>
+                <a href="forecast.html" class="text-white font-medium hover:text-yellow-300 transition-colors">Forecast</a>
+                <a href="charts.html" class="text-white/80 hover:text-yellow-300 transition-colors">Charts</a>
+                <a href="about.html" class="text-white/80 hover:text-yellow-300 transition-colors">About</a>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" id="citySearch" placeholder="Search city..." 
+                           class="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-2 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                    <button id="searchBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-white hover:text-yellow-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button id="locationBtn" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Page Header -->
+        <section class="text-center mb-8 fade-in">
+            <h2 class="text-4xl font-bold text-white mb-2">7-Day Weather Forecast</h2>
+            <p class="text-white/80 text-lg">Detailed weather outlook for the week ahead</p>
+            <div class="flex items-center justify-center space-x-2 mt-4">
+                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                </svg>
+                <span id="currentLocation" class="text-xl text-white font-medium">New York, NY</span>
+            </div>
+        </section>
+        
+        <!-- Weekly Overview Chart -->
+        <section class="glass-card p-6 mb-8 fade-in hover-lift">
+            <h3 class="text-xl font-semibold text-white mb-6">Weekly Temperature Trends</h3>
+            <div class="relative">
+                <canvas id="weeklyChart" width="400" height="200"></canvas>
+            </div>
+        </section>
+        
+        <!-- 7-Day Forecast Grid -->
+        <section class="mb-8">
+            <h3 class="text-2xl font-semibold text-white mb-6 text-center">Daily Forecast</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="forecastGrid">
+                <!-- Forecast cards will be inserted here -->
+            </div>
+        </section>
+        
+        <!-- Weather Summary -->
+        <section class="glass-card p-6 mb-8 fade-in hover-lift">
+            <h3 class="text-xl font-semibold text-white mb-6">Weekly Weather Summary</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <div class="text-3xl mb-2">🌡️</div>
+                    <div class="text-white font-semibold text-lg" id="avgTemp">22°C</div>
+                    <div class="text-white/70">Average Temperature</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl mb-2">💧</div>
+                    <div class="text-white font-semibold text-lg" id="totalPrecipitation">15mm</div>
+                    <div class="text-white/70">Total Precipitation</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-3xl mb-2">☀️</div>
+                    <div class="text-white font-semibold text-lg" id="sunnyDays">4 days</div>
+                    <div class="text-white/70">Sunny Days</div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Activity Recommendations -->
+        <section class="glass-card p-6 mb-8 fade-in hover-lift">
+            <h3 class="text-xl font-semibold text-white mb-6">Activity Recommendations</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white/10 rounded-lg p-4 text-center">
+                    <div class="text-2xl mb-2">🏃‍♂️</div>
+                    <div class="text-white font-medium">Outdoor Running</div>
+                    <div class="text-white/70 text-sm">Best on Tuesday, Thursday</div>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4 text-center">
+                    <div class="text-2xl mb-2">🏖️</div>
+                    <div class="text-white font-medium">Beach Day</div>
+                    <div class="text-white/70 text-sm">Perfect on Wednesday</div>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4 text-center">
+                    <div class="text-2xl mb-2">🎬</div>
+                    <div class="text-white font-medium">Indoor Activities</div>
+                    <div class="text-white/70 text-sm">Recommended Monday, Friday</div>
+                </div>
+                <div class="bg-white/10 rounded-lg p-4 text-center">
+                    <div class="text-2xl mb-2">🚗</div>
+                    <div class="text-white font-medium">Road Trip</div>
+                    <div class="text-white/70 text-sm">Great for weekend</div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="glass-card mx-4 mb-4 p-6 text-center">
+        <div class="text-white/80">
+            <p class="mb-2">&copy; 2025 WeatherPro Dashboard. Professional weather insights.</p>
+            <p class="text-sm">Data provided by OpenWeatherMap and Visual Crossing</p>
+        </div>
+    </footer>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="glass-card p-8 text-center">
+            <div class="animate-spin w-12 h-12 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
+            <div class="text-white text-lg">Loading forecast data...</div>
+        </div>
+    </div>
+     <!-- Java Script -->
+      <script src="main.js"></script>
+<script>
+/* ----------  tiny helper – format a short time  ---------- */
+const fmtTime = ts => new Date(ts * 1000).toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+
+/* ----------  normalise OpenWeatherMap daily / hourly  ---------- */
+function normOWM(daily) {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return daily.slice(0, 7).map((d, i) => {
+    const date = new Date(); date.setDate(date.getDate() + i);
+    return {
+      day: days[date.getDay()],
+      date: date.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}),
+      weather: {
+        main: d.weather[0].main,
+        description: d.weather[0].description,
+        icon: owmIconEmoji(d.weather[0].icon)
+      },
+      temperature: { current: d.temp.day, high: d.temp.max, low: d.temp.min },
+      precipitation: Math.round((d.pop || 0) * 100),
+      humidity: d.humidity,
+      windSpeed: d.wind_speed,
+      uvIndex: Math.round(d.uvi || 0),
+      sunrise: fmtTime(d.sunrise),
+      sunset: fmtTime(d.sunset),
+      hourly: []
+    };
+  });
+}
+function owmIconEmoji(icon) {
+  const map = {'01d':'☀️','01n':'🌙','02d':'⛅','02n':'☁️','03d':'☁️','03n':'☁️','04d':'☁️','04n':'☁️','09d':'🌧️','09n':'🌧️','10d':'🌦️','10n':'🌧️','11d':'⛈️','11n':'⛈️','13d':'❄️','13n':'❄️','50d':'🌫️','50n':'🌫️'};
+  return map[icon] || '☁️';
+}
+
+/* ----------  page controller  ---------- */
+class ForecastPage {
+  constructor() {
+    this.forecastData = [];
+    this.chart        = null;
+    this.init();
+  }
+
+  async init() {
+    await this.loadForecast();   // async fetch
+    this.renderCards();          // paint 7-day cards
+    this.paintChart();           // paint weekly temperature line
+    this.fillSummary();          // bottom statistics
+    this.hideLoading();          // spinner off
+  }
+
+  /* ----------  fetch live 7-day forecast  ---------- */
+  async loadForecast() {
+    try {
+      const lat = 40.7128, lon = -74.0060;               // default: NYC
+      const url = `https://api.openweathermap.org/data/3.0/onecall?lat=${lat}&lon=${lon}&exclude=current,minutely,alerts&appid=${window.weatherDashboard.apiKey}&units=metric`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('forecast unreachable');
+      const payload = await res.json();
+      this.forecastData = normOWM(payload.daily);
+    } catch (e) {
+      console.warn('OWM forecast failed – using mock', e);
+      this.mockForecast();
+    }
+  }
+
+  mockForecast() {
+    const conditions = [
+      {main:'Clear', description:'clear sky', icon:'☀️', high:28, low:18},
+      {main:'Clouds',description:'few clouds',icon:'⛅',high:22,low:15},
+      {main:'Rain',description:'light rain',icon:'🌧️',high:16,low:12},
+      {main:'Snow',description:'light snow',icon:'❄️',high:2, low:-3},
+      {main:'Thunderstorm',description:'thunderstorm',icon:'⛈️',high:19,low:13}
+    ];
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+    this.forecastData = days.map((day,i)=>{
+      const c = conditions[Math.floor(Math.random()*conditions.length)];
+      const date = new Date(); date.setDate(date.getDate()+i);
+      return {
+        day, date: date.toLocaleDateString('en-US',{month:'short',day:'numeric'}),
+        weather:c, temperature:{current:c.high-2, high:c.high, low:c.low},
+        precipitation:Math.floor(Math.random()*100),
+        humidity:50+Math.floor(Math.random()*30),
+        windSpeed:5+Math.floor(Math.random()*20),
+        uvIndex:Math.floor(Math.random()*11),
+        sunrise:'06:30', sunset:'19:45', hourly:[]
+      };
+    });
+  }
+
+  /* ----------  render 7 cards  ---------- */
+  renderCards() {
+    const grid = document.getElementById('forecastGrid');
+    grid.innerHTML = '';
+    this.forecastData.forEach((day, i) => {
+      const card = document.createElement('div');
+      card.className = 'glass-card forecast-card p-6 slide-in';
+      card.style.animationDelay = `${i*0.1}s`;
+      card.innerHTML = `
+        <div class="text-center mb-3">
+          <div class="text-white font-semibold text-lg">${day.day}</div>
+          <div class="text-white/70 text-sm">${day.date}</div>
+        </div>
+        <div class="text-center mb-4">
+          <div class="weather-icon text-4xl mb-2">${day.weather.icon}</div>
+          <div class="text-white font-medium capitalize">${day.weather.description}</div>
+        </div>
+        <div class="text-center mb-4">
+          <div class="text-3xl font-bold text-white">${Math.round(day.temperature.high)}°</div>
+          <div class="text-white/70 text-sm">High</div>
+          <div class="text-xl text-white/80">${Math.round(day.temperature.low)}°</div>
+          <div class="text-white/70 text-sm">Low</div>
+        </div>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-white/70">💧 Precipitation</span><span class="text-white font-medium">${day.precipitation}%</span></div>
+          <div class="flex justify-between"><span class="text-white/70">💨 Wind</span><span class="text-white font-medium">${Math.round(day.windSpeed)} km/h</span></div>
+          <div class="flex justify-between"><span class="text-white/70">☀️ UV Index</span><span class="text-white font-medium">${day.uvIndex}</span></div>
+        </div>
+        <button class="w-full mt-4 bg-white/20 hover:bg-white/30 text-white py-2 rounded-lg transition-colors expand-btn">View Hourly Forecast</button>`;
+      card.querySelector('.expand-btn').addEventListener('click', e => {
+        e.stopPropagation(); this.toggleHourly(card, day);
+      });
+      grid.appendChild(card);
+    });
+  }
+
+  toggleHourly(card, day) {
+    const expanded = card.classList.contains('expanded');
+    document.querySelectorAll('.forecast-card.expanded').forEach(c => {
+      if (c !== card) { c.classList.remove('expanded'); const h = c.querySelector('.hourly-section'); if (h) h.remove(); }
+    });
+    if (!expanded) {
+      card.classList.add('expanded');
+      const section = this.hourlySection(day);
+      card.appendChild(section);
+      requestAnimationFrame(() => {
+        section.style.opacity = '1';
+        section.style.transform = 'translateY(0)';
+      });
+    } else {
+      card.classList.remove('expanded');
+      const section = card.querySelector('.hourly-section');
+      if (section) {
+        section.style.opacity = '0';
+        section.style.transform = 'translateY(20px)';
+        setTimeout(() => section.remove(), 300);
+      }
+    }
+  }
+
+  hourlySection(day) {
+    const div = document.createElement('div');
+    div.className = 'hourly-section mt-4 pt-4 border-t border-white/20';
+    div.style.cssText = 'opacity:0; transform:translateY(20px); transition:all .3s ease';
+    div.innerHTML = `
+      <h4 class="text-white font-semibold mb-3">Hourly Forecast</h4>
+      <div class="hourly-timeline overflow-x-auto pb-3">
+        <div class="flex space-x-3" style="width:max-content;">
+          ${day.hourly.map(h => `
+            <div class="flex-shrink-0 text-center p-3 bg-white/10 rounded-lg min-w-[70px]">
+              <div class="text-white text-xs mb-1">${h.time}</div>
+              <div class="text-lg mb-1">${h.weather}</div>
+              <div class="text-white font-semibold">${h.temp}°</div>
+              <div class="text-white/70 text-xs mt-1">${h.precipitation}%</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    return div;
+  }
+
+  /* ----------  weekly temperature line-chart  ---------- */
+  paintChart() {
+    const ctx = document.getElementById('weeklyChart').getContext('2d');
+    if (this.chart) this.chart.destroy();
+    const labels = this.forecastData.map(d => d.day);
+    const highs  = this.forecastData.map(d => Math.round(d.temperature.high));
+    const lows   = this.forecastData.map(d => Math.round(d.temperature.low));
+    this.chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'High Temperature',
+          data: highs,
+          borderColor: '#F59E0B',
+          backgroundColor: 'rgba(245,158,11,0.1)',
+          borderWidth: 3,
+          fill: false,
+          tension: 0.4
+        }, {
+          label: 'Low Temperature',
+          data: lows,
+          borderColor: '#3B82F6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          borderWidth: 3,
+          fill: false,
+          tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: 'white' } } },
+        scales: {
+          y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'white' } },
+          x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: 'white' } }
+        }
+      }
+    });
+  }
+
+  /* ----------  summary statistics  ---------- */
+  fillSummary() {
+    const avgTemp = Math.round(this.forecastData.reduce((s,d)=>s+d.temperature.current,0)/this.forecastData.length);
+    const totalP  = this.forecastData.reduce((s,d)=>s+d.precipitation,0);
+    const sunny   = this.forecastData.filter(d=>d.weather.main==='Clear'||d.weather.main==='Clouds').length;
+    document.getElementById('avgTemp').textContent           = `${avgTemp}°C`;
+    document.getElementById('totalPrecipitation').textContent = `${totalP}mm`;
+    document.getElementById('sunnyDays').textContent          = `${sunny} days`;
+  }
+
+  hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => new ForecastPage());
+</script>
+    

@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherPro - Professional Weather Dashboard</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://unpkg.com/splitting@1.0.6/dist/splitting.css" rel="stylesheet">
+    <script src="https://unpkg.com/splitting@1.0.6/dist/splitting.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Custom Styles -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        
+        :root {
+            --primary-color: #3B82F6;
+            --secondary-color: #F59E0B;
+            --accent-color: #10B981;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --bg-primary: #FFFFFF;
+            --bg-secondary: #F9FAFB;
+            --border-color: #E5E7EB;
+        }
+        
+        /* Weather Theme Variables */
+        .theme-sunny {
+            --primary-color: #F59E0B;
+            --secondary-color: #FCD34D;
+            --accent-color: #FB7185;
+            --bg-gradient: linear-gradient(135deg, #3B82F6 0%, #F59E0B 100%);
+        }
+        
+        .theme-rainy {
+            --primary-color: #334155;
+            --secondary-color: #64748B;
+            --accent-color: #06B6D4;
+            --bg-gradient: linear-gradient(135deg, #1E293B 0%, #334155 100%);
+        }
+        
+        .theme-snowy {
+            --primary-color: #E0F2FE;
+            --secondary-color: #F8FAFC;
+            --accent-color: #A78BFA;
+            --bg-gradient: linear-gradient(135deg, #0284C7 0%, #E0F2FE 100%);
+        }
+        
+        .theme-cloudy {
+            --primary-color: #6B7280;
+            --secondary-color: #9CA3AF;
+            --accent-color: #34D399;
+            --bg-gradient: linear-gradient(135deg, #374151 0%, #6B7280 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+        
+        /* Weather Background Effects */
+        .weather-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        
+        /* Rain Animation */
+        .rain-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 20px;
+            background: linear-gradient(transparent, rgba(255, 255, 255, 0.6));
+            border-radius: 50%;
+            animation: rain-fall linear infinite;
+        }
+        
+        @keyframes rain-fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+        
+        /* Snow Animation */
+        .snow-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .snow-flake {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: white;
+            border-radius: 50%;
+            opacity: 0.8;
+            animation: snow-fall linear infinite;
+        }
+        
+        @keyframes snow-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+            }
+        }
+        
+        /* Sun Animation */
+        .sun-effect {
+            position: absolute;
+            top: 10%;
+            right: 10%;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, #FCD34D 0%, #F59E0B 70%, transparent 100%);
+            border-radius: 50%;
+            animation: sun-pulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes sun-pulse {
+            0%, 100% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+        
+        /* Glass Morphism */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Loading Animation */
+        .loading-skeleton {
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* Hover Effects */
+        .hover-lift {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .glass-card {
+                margin: 8px;
+                padding: 16px;
+            }
+            
+            .weather-temp {
+                font-size: 3rem;
+            }
+        }
+        
+        /* Custom Animations */
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .slide-in {
+            animation: slideIn 0.8s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+<base target="_blank">
+</head>
+<body class="theme-sunny">
+    <!-- Weather Background Effects -->
+    <div class="weather-background" id="weatherBackground">
+        <!-- Dynamic weather effects will be inserted here -->
+    </div>
+    
+    <!-- Navigation -->
+    <nav class="glass-card mx-4 mt-4 p-4 fade-in">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+                <img src="weather-logo.png" alt="WeatherPro" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-white">WeatherPro</h1>
+            </div>
+            
+            <div class="hidden md:flex items-center space-x-6">
+                <a href="index.html" class="text-white font-medium hover:text-yellow-300 transition-colors">Dashboard</a>
+                <a href="forecast.html" class="text-white/80 hover:text-yellow-300 transition-colors">Forecast</a>
+                <a href="charts.html" class="text-white/80 hover:text-yellow-300 transition-colors">Charts</a>
+                <a href="about.html" class="text-white/80 hover:text-yellow-300 transition-colors">About</a>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <input type="text" id="citySearch" placeholder="Search city..." 
+                           class="bg-white/20 backdrop-blur-sm border border-white/30 rounded-lg px-4 py-2 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+                    <button id="searchBtn" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-white hover:text-yellow-300">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <button id="locationBtn" class="bg-white/20 hover:bg-white/30 p-2 rounded-lg transition-colors">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Current Weather Hero -->
+        <section class="glass-card p-8 mb-8 fade-in hover-lift">
+            <div class="flex flex-col lg:flex-row items-center justify-between">
+                <div class="text-center lg:text-left mb-8 lg:mb-0">
+                    <div class="flex items-center justify-center lg:justify-start space-x-2 mb-2">
+                        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <h2 id="cityName" class="text-2xl font-semibold text-white">Loading...</h2>
+                    </div>
+                    <p id="currentDate" class="text-white/80 mb-4"></p>
+                    <div class="flex items-center justify-center lg:justify-start space-x-4">
+                        <div class="weather-temp text-6xl font-bold text-white" id="currentTemp">--°</div>
+                        <div class="text-left">
+                            <div id="weatherDescription" class="text-xl text-white font-medium capitalize">Loading...</div>
+                            <div class="text-white/70">Feels like <span id="feelsLike">--°</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center">
+                    <div id="weatherIcon" class="text-8xl mb-4">☁️</div>
+                    <div class="flex space-x-6 text-white">
+                        <div class="text-center">
+                            <div class="text-2xl font-semibold" id="humidity">--%</div>
+                            <div class="text-sm text-white/70">Humidity</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-semibold" id="windSpeed">-- km/h</div>
+                            <div class="text-sm text-white/70">Wind Speed</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-semibold" id="pressure">-- hPa</div>
+                            <div class="text-sm text-white/70">Pressure</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Weather Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Sunrise/Sunset -->
+            <div class="glass-card p-6 slide-in hover-lift">
+                <h3 class="text-lg font-semibold text-white mb-4">Sunrise & Sunset</h3>
+                <div class="flex items-center justify-between">
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">🌅</div>
+                        <div class="text-white font-medium" id="sunrise">--:--</div>
+                        <div class="text-sm text-white/70">Sunrise</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl mb-2">🌇</div>
+                        <div class="text-white font-medium" id="sunset">--:--</div>
+                        <div class="text-sm text-white/70">Sunset</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- UV Index -->
+            <div class="glass-card p-6 slide-in hover-lift" style="animation-delay: 0.1s;">
+                <h3 class="text-lg font-semibold text-white mb-4">UV Index</h3>
+                <div class="text-center">
+                    <div class="text-4xl mb-2" id="uvIndex">--</div>
+                    <div class="text-white font-medium" id="uvDescription">Loading...</div>
+                    <div class="w-full bg-white/20 rounded-full h-2 mt-3">
+                        <div id="uvBar" class="bg-yellow-300 h-2 rounded-full" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Air Quality -->
+            <div class="glass-card p-6 slide-in hover-lift" style="animation-delay: 0.2s;">
+                <h3 class="text-lg font-semibold text-white mb-4">Air Quality</h3>
+                <div class="text-center">
+                    <div class="text-4xl mb-2" id="aqi">--</div>
+                    <div class="text-white font-medium" id="aqiDescription">Loading...</div>
+                    <div class="text-sm text-white/70 mt-2" id="aqiAdvice">Loading...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hourly Forecast -->
+        <section class="glass-card p-6 mb-8 fade-in hover-lift">
+            <h3 class="text-xl font-semibold text-white mb-6">Next 24 Hours</h3>
+            <div class="flex overflow-x-auto space-x-4 pb-4" id="hourlyForecast">
+                <!-- Hourly cards will be inserted here -->
+            </div>
+        </section>
+        
+        <!-- Weather Map -->
+        <section class="glass-card p-6 mb-8 fade-in hover-lift">
+            <h3 class="text-xl font-semibold text-white mb-6">Weather Radar</h3>
+            <div class="relative">
+                <div id="weatherMap" class="w-full h-96 bg-white/10 rounded-lg flex items-center justify-center">
+                    <div class="text-white/70 text-center">
+                        <div class="text-4xl mb-2">🗺️</div>
+                        <div>Interactive weather map loading...</div>
+                    </div>
+                </div>
+                <div class="absolute top-4 right-4 flex space-x-2">
+                    <button class="bg-white/20 hover:bg-white/30 p-2 rounded-lg text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
+                        </svg>
+                    </button>
+                    <button class="bg-white/20 hover:bg-white/30 p-2 rounded-lg text-white transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Weather Alerts -->
+        <section id="alertsSection" class="glass-card p-6 mb-8 fade-in hover-lift" style="display: none;">
+            <h3 class="text-xl font-semibold text-white mb-4">Weather Alerts</h3>
+            <div id="alertsContainer" class="space-y-3">
+                <!-- Alerts will be inserted here -->
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="glass-card mx-4 mb-4 p-6 text-center">
+        <div class="text-white/80">
+            <p class="mb-2">&copy; 2025 WeatherPro Dashboard. Professional weather insights.</p>
+            <p class="text-sm">Data provided by OpenWeatherMap and Visual Crossing</p>
+        </div>
+    </footer>
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+        <div class="glass-card p-8 text-center">
+            <div class="animate-spin w-12 h-12 border-4 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
+            <div class="text-white text-lg">Loading weather data...</div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="main.js"></script>
+    <script src="weather-api.js"></script>
+    <script src="animations.js"></script>
+</body>
+</html>
