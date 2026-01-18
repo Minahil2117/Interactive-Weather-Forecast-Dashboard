@@ -41,6 +41,7 @@ Experience the weather dashboard live: **[Your Live Demo URL Here]**
 
 
 ### Interactive Charts
+_ Screenshot_18-1-2026_212637_.jpeg
 
 ## 🎯 Installation & Setup
 
