@@ -38,8 +38,8 @@ Experience the weather dashboard live: **[Your Live Demo URL Here]**
 ## 📸 Screenshots
 
 ### Desktop View
-
-
+- s1.png
+- 
 ### Interactive Charts
 _ Screenshot_18-1-2026_212637_.jpeg
 
