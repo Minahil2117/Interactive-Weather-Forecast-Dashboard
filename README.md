@@ -39,10 +39,8 @@ Experience the weather dashboard live: ** https://minahil2117.github.io/Interact
 
 ### Desktop View
 - s1.png
-- 
 ### Interactive Charts
-_ Screenshot_18-1-2026_212637_.jpeg
-
+- Screenshot_18-1-2026_212637_.jpeg
 ## 🎯 Installation & Setup
 
 ### Prerequisites
